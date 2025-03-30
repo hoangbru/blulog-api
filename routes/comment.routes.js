@@ -5,7 +5,7 @@ import {
   remove,
   toggleLike,
 } from "../controllers/comment.controller.js";
-import { protect } from "../middleware/protect.js";
+import { authenticate } from "../middleware/protect.js";
 
 const router = express.Router();
 
@@ -48,7 +48,7 @@ const router = express.Router();
  *       500:
  *         description: Error creating comment
  */
-router.post("/comments", protect, create);
+router.post("/comments", authenticate, create);
 
 /**
  * @swagger
@@ -98,7 +98,7 @@ router.get("/comments", list);
  *       500:
  *         description: Error deleting comment
  */
-router.delete("/comments/:id", protect, remove);
+router.delete("/comments/:id", authenticate, remove);
 
 /**
  * @swagger
@@ -123,6 +123,6 @@ router.delete("/comments/:id", protect, remove);
  *       500:
  *         description: Error toggling like
  */
-router.post("/comments/:id/like", protect, toggleLike);
+router.post("/comments/:id/like", authenticate, toggleLike);
 
 export default router;

@@ -41,21 +41,17 @@ export const uploadImages = async (req, res) => {
  */
 export const uploadImage = async (req, res) => {
   try {
-    // Check if files are uploaded
-    if (!req.files || req.files.length === 0) {
+    if (!req.file) {
       return res
         .status(400)
-        .json({ message: "No images uploaded", errors: true });
+        .json({ message: "No image uploaded", errors: true });
     }
 
-    // Add uploaded images to the post's images array
-    const imagePaths = req.files.map(
-      (file) => `${process.env.APP_URL}/uploads/${file.filename}`
-    );
+    const imagePath = `${process.env.APP_URL}/uploads/${req.file.filename}`;
 
     res.status(200).json({
-      message: "Images uploaded successfully",
-      images: imagePaths,
+      message: "Image uploaded successfully",
+      image: imagePath,
     });
   } catch (error) {
     console.error("Error uploading post images:", error);

@@ -13,13 +13,13 @@ export const sendEmail = async (to, subject, text, html = "") => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.EMAIL_USER, // Your Gmail username
-        pass: process.env.EMAIL_PASS, // Your app password
+        user: process.env.SMTP_EMAIL, // Your Gmail username
+        pass: process.env.SMTP_PASSWORD, // Your app password
       },
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER, // Sender's email address
+      from: process.env.SMTP_EMAIL, // Sender's email address
       to, // Recipient's email address
       subject, // Email subject
       text, // Email content in plain text
@@ -27,9 +27,11 @@ export const sendEmail = async (to, subject, text, html = "") => {
     };
 
     // Send the email
-    await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully");
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent to ${to}: ${info.messageId}`);
+    return true;
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error(`❌ Failed to send email to ${to}:`, error);
+    return false;
   }
 };

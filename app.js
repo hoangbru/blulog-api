@@ -31,7 +31,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.APP_FE_URL,
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );

@@ -107,7 +107,7 @@ export const list = async (req, res) => {
       .sort(sortOptions)
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .populate("category", "name")
+      .populate("category", "name slug")
       .populate("author", "fullName");
 
     // Count total posts based on the query
@@ -148,7 +148,7 @@ export const show = async (req, res) => {
   try {
     // Find post by slug
     const post = await Post.findOne({ slug })
-      .populate("category", "name")
+      .populate("category", "name slug")
       .populate("author", "fullName");
 
     if (!post) {

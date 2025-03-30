@@ -42,12 +42,10 @@ export const create = async (req, res) => {
       parentComment: parentComment || null,
     });
 
-    res
-      .status(201)
-      .json({
-        meta: { message: "Comment added successfully" },
-        data: { comment },
-      });
+    res.status(201).json({
+      meta: { message: "Comment added successfully" },
+      data: { comment },
+    });
   } catch (error) {
     console.error("Error creating comment:", error);
     res.status(500).json({
@@ -60,38 +58,83 @@ export const create = async (req, res) => {
 };
 
 /**
- * @desc Get all comments for a post
- * @route GET /api/comments?post=
+ * @desc Get all comments for a post (with replies)
+ * @route GET /api/comments?post=&page=&limit=
  * @access Public
  */
 export const list = async (req, res) => {
-  const { post } = req.query;
+  const { post, page = 1, limit = 5 } = req.query;
 
   try {
     if (!post) {
-      return res
-        .status(400)
-        .json({ meta: { message: "Post ID is required", errors: true } });
+      return res.status(400).json({
+        meta: { message: "Post ID is required", errors: true },
+      });
     }
 
-    const comments = await Comment.find({ post }).populate("user", "name");
+    const skip = (page - 1) * limit;
 
-    res
-      .status(200)
-      .json({
-        meta: { message: "Comments fetched successfully" },
-        data: { comments },
-      });
+    // Fetch parent comments (top-level comments)
+    const comments = await Comment.find({ post, parentComment: null })
+      .populate("user", "fullName avatar")
+      .sort({ createdAt: -1 }) // Sort by newest first
+      .skip(skip)
+      .limit(Number(limit))
+      .select("-__v"); // Exclude __v field
+
+    // Extract comment IDs for fetching replies
+    const commentIds = comments.map((c) => c._id);
+
+    // Fetch replies for the above comments
+    const replies = await Comment.find({ parentComment: { $in: commentIds } })
+      .populate("user", "fullName avatar")
+      .sort({ createdAt: 1 }) // Sort replies by oldest first
+      .select("-__v");
+
+    // Format comments and include their respective replies
+    const commentWithReplies = comments.map((comment) => {
+      const cleanComment = comment.toObject();
+      cleanComment.id = cleanComment._id; // Rename _id to id
+      delete cleanComment._id; // Remove _id field
+
+      // Attach replies to each comment
+      cleanComment.replies = replies
+        .filter((reply) => reply.parentComment.equals(comment._id))
+        .map((reply) => {
+          const cleanReply = reply.toObject();
+          cleanReply.id = cleanReply._id;
+          delete cleanReply._id;
+          return cleanReply;
+        });
+
+      return cleanComment;
+    });
+
+    // Count total number of parent comments (excluding replies)
+    const total = await Comment.countDocuments({ post, parentComment: null });
+
+    res.status(200).json({
+      meta: {
+        message: "Comments fetched successfully",
+      },
+      data: {
+        comments: commentWithReplies,
+        pagination: {
+          currentPage: Number(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          perPage: Number(limit),
+        },
+      },
+    });
   } catch (error) {
     console.error("Error fetching comments:", error);
-    res
-      .status(500)
-      .json({
-        meta: {
-          message: "Error fetching comments",
-          errors: error.message || error,
-        },
-      });
+    res.status(500).json({
+      meta: {
+        message: "Error fetching comments",
+        errors: error.message || error,
+      },
+    });
   }
 };
 
@@ -124,14 +167,12 @@ export const remove = async (req, res) => {
     res.status(200).json({ meta: { message: "Comment deleted successfully" } });
   } catch (error) {
     console.error("Error deleting comment:", error);
-    res
-      .status(500)
-      .json({
-        meta: {
-          message: "Error deleting comment",
-          errors: error.message || error,
-        },
-      });
+    res.status(500).json({
+      meta: {
+        message: "Error deleting comment",
+        errors: error.message || error,
+      },
+    });
   }
 };
 
@@ -154,21 +195,17 @@ export const toggleLike = async (req, res) => {
     }
 
     await comment.toggleLike(userId);
-    res
-      .status(200)
-      .json({
-        meta: { message: "Like status updated successfully" },
-        data: { likes: comment.likes.length },
-      });
+    res.status(200).json({
+      meta: { message: "Like status updated successfully" },
+      data: { likes: comment.likes.length },
+    });
   } catch (error) {
     console.error("Error toggling like:", error);
-    res
-      .status(500)
-      .json({
-        meta: {
-          message: "Error toggling like",
-          errors: error.message || error,
-        },
-      });
+    res.status(500).json({
+      meta: {
+        message: "Error toggling like",
+        errors: error.message || error,
+      },
+    });
   }
 };

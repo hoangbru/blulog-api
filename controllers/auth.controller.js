@@ -9,6 +9,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "../utils/generateToken.js";
+import { sendEmail } from "../utils/sendMail.js";
 
 /**
  * @desc Register a new user
@@ -124,7 +125,12 @@ export const login = async (req, res) => {
       meta: { message: "Login successful" },
       data: {
         accessToken,
-        user: { id: user.id, fullName: user.fullName, email: user.email },
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+        },
       },
     });
   } catch (error) {
@@ -252,6 +258,210 @@ export const logout = (req, res) => {
     console.error("Error logging out:", error);
     return res.status(500).json({
       meta: { message: "Error logging out", errors: error.message || error },
+    });
+  }
+};
+
+/**
+ * @desc Get list of users
+ * @route GET /api/users
+ * @access Private (Admin only)
+ */
+export const list = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.status(200).json({
+      meta: { message: "User list retrieved successfully" },
+      data: { users },
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({
+      meta: { message: "Error fetching users", errors: error.message || error },
+    });
+  }
+};
+
+/**
+ * @desc Update user status
+ * @route PATCH /api/users/:id/status
+ * @access Private
+ */
+export const updateStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["active", "inactive"].includes(status)) {
+    return res.status(400).json({
+      meta: { message: "Invalid status", errors: true },
+    });
+  }
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        meta: { message: "User not found", errors: true },
+      });
+    }
+
+    res.status(200).json({
+      meta: { message: "User status updated successfully" },
+      data: { user },
+    });
+  } catch (error) {
+    console.error("Error updating user status:", error);
+    res.status(500).json({
+      meta: { message: "Error updating user status", errors: error.message },
+    });
+  }
+};
+
+/**
+ * @desc Update user information
+ * @route PUT /api/users/:id
+ * @access Private (User only)
+ */
+export const update = async (req, res) => {
+  const { id } = req.params;
+  const { fullName, phone, address, avatar } = req.body;
+
+  try {
+    // Validate phone number format if provided
+    if (phone && !/^\+?[1-9]\d{1,14}$/.test(phone)) {
+      return res.status(400).json({
+        meta: { message: "Invalid phone number format", errors: true },
+      });
+    }
+
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      id,
+      { fullName, phone, address, avatar },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        meta: { message: "User not found", errors: true },
+      });
+    }
+
+    return res.status(200).json({
+      meta: { message: "User profile updated successfully" },
+      data: { user },
+    });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return res.status(500).json({
+      meta: { message: "Error updating user", errors: error.message || error },
+    });
+  }
+};
+
+/**
+ * @desc Delete user
+ * @route DELETE /api/users/:id
+ * @access Private (Admin only)
+ */
+export const remove = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findByIdAndDelete(id);
+    if (!user) {
+      return res.status(404).json({
+        meta: { message: "User not found", errors: true },
+      });
+    }
+
+    res.status(200).json({
+      meta: { message: "User deleted successfully" },
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({
+      meta: { message: "Error deleting user", errors: error.message },
+    });
+  }
+};
+
+/**
+ * @desc Send reset password link
+ * @route POST /api/auth/forgot-password
+ * @access Public
+ */
+export const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        meta: { message: "User not found", errors: true },
+      });
+    }
+
+    // Generate reset token (expires in 15 minutes)
+    const token = jwt.sign({ id: user._id }, process.env.RESET_TOKEN_SECRET, {
+      expiresIn: process.env.RESET_TOKEN_EXPIRE,
+    });
+
+    // Send email with reset link
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    await sendEmail(
+      email,
+      "Password Reset Request",
+      "",
+      `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 15 minutes.</p>`
+    );
+
+    res.status(200).json({
+      meta: { message: "Password reset link sent successfully" },
+    });
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    res.status(500).json({
+      meta: { message: "Error sending password reset email", errors: error },
+    });
+  }
+};
+
+/**
+ * @desc Reset user password
+ * @route POST /api/auth/reset-password
+ * @access Public
+ */
+export const resetPassword = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.RESET_TOKEN_SECRET);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({
+        meta: { message: "User not found", errors: true },
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await User.findByIdAndUpdate(user._id, { password: hashedPassword });
+
+    res.status(200).json({
+      meta: { message: "Password reset successfully" },
+    });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(400).json({
+      meta: { message: "Invalid or expired token", errors: true },
     });
   }
 };

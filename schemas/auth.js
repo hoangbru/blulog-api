@@ -12,11 +12,20 @@ export const registerValidationSchema = Joi.object({
     "string.empty": "Email cannot be empty",
     "any.required": "Email is required",
   }),
-  password: Joi.string().min(6).required().messages({
-    "string.empty": "Password cannot be empty",
-    "string.min": "Password must be at least 6 characters long",
-    "any.required": "Password is required",
-  }),
+  password: Joi.string()
+    .min(6)
+    .pattern(/^[A-Z]/)
+    .message("Password must start with an uppercase letter")
+    .pattern(/(?=.*\d)/)
+    .message("Password must contain at least one number")
+    .pattern(/(?=.*[!@#$%^&*])/)
+    .message("Password must contain at least one special character")
+    .required()
+    .messages({
+      "string.empty": "Password cannot be empty",
+      "string.min": "Password must be at least 6 characters long",
+      "any.required": "Password is required",
+    }),
   phone: Joi.string()
     .pattern(/^\+?[1-9]\d{1,14}$/)
     .optional()
