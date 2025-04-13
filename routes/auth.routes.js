@@ -10,7 +10,8 @@ import {
   update,
   remove,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  loginAdmin,
 } from "../controllers/auth.controller.js";
 import { protect, authenticate } from "../middleware/protect.js";
 
@@ -59,7 +60,7 @@ router.post("/register", register);
  * @swagger
  * /api/login:
  *   post:
- *     summary: Log in a user
+ *     summary: Log in as a user
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -70,10 +71,10 @@ router.post("/register", register);
  *             properties:
  *               email:
  *                 type: string
- *                 example: johndoe@example.com
+ *                 example: user@example.com
  *               password:
  *                 type: string
- *                 example: Passw0rd!
+ *                 example: UserPass123!
  *     responses:
  *       200:
  *         description: User logged in successfully
@@ -84,16 +85,52 @@ router.post("/register", register);
  *               properties:
  *                 accessToken:
  *                   type: string
- *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *                 refreshToken:
  *                   type: string
- *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *       400:
  *         description: Invalid email or password
  *       500:
  *         description: Internal server error
  */
 router.post("/login", login);
+
+/**
+ * @swagger
+ * /api/login/admin:
+ *   post:
+ *     summary: Log in as an admin
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: admin@example.com
+ *               password:
+ *                 type: string
+ *                 example: AdminPass123!
+ *     responses:
+ *       200:
+ *         description: Admin logged in successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       400:
+ *         description: Invalid email, password, or insufficient permissions
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/login/admin", loginAdmin);
 
 /**
  * @swagger

@@ -25,13 +25,14 @@ const app = express();
 const port = process.env.PORT || 8080;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const allowedOrigins = process.env.CLIENT_URL.split(',');
 
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -55,5 +56,5 @@ routes.forEach((router) => app.use("/api", router));
 
 // Start the server
 app.listen(port, () => {
-  console.log(`🚀 Server is running on http://localhost:${port}`);
+  console.log(`🚀 Server is running on ${process.env.APP_URL}:${port}`);
 });

@@ -72,11 +72,9 @@ export const register = async (req, res) => {
 };
 
 /**
- * @desc Login user
- * @route POST /api/login
- * @access Public
+ * @desc Handle user login
  */
-export const login = async (req, res) => {
+const handleLogin = async (req, res, roleRequired = null) => {
   const { email, password } = req.body;
 
   try {
@@ -95,9 +93,12 @@ export const login = async (req, res) => {
 
     // Check if user exists
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || (roleRequired && user.role !== roleRequired)) {
       return res.status(400).json({
-        meta: { message: "Invalid email or password", errors: true },
+        meta: {
+          message: "Invalid email, password, or insufficient permissions",
+          errors: true,
+        },
       });
     }
 
@@ -115,9 +116,9 @@ export const login = async (req, res) => {
 
     // Save refresh token in HTTP-Only Cookie
     res.cookie("refreshToken", refreshToken, {
-      httpOnly: true, // Prevent XSS attacks
-      secure: process.env.NODE_ENV === "production", // Send only in HTTPS in production
-      sameSite: "Strict", // Prevent CSRF
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -140,6 +141,20 @@ export const login = async (req, res) => {
     });
   }
 };
+
+/**
+ * @desc Login user
+ * @route POST /api/login
+ * @access Public
+ */
+export const login = (req, res) => handleLogin(req, res);
+
+/**
+ * @desc Login admin
+ * @route POST /api/login/admin
+ * @access Public
+ */
+export const loginAdmin = (req, res) => handleLogin(req, res, "admin");
 
 /**
  * @desc Get user profile
