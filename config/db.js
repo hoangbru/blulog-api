@@ -1,49 +1,33 @@
 import mongoose from "mongoose";
 
 export const connectDB = () => {
-  const {
-    MONGO_USERNAME,
-    MONGO_PASSWORD,
-    MONGO_HOSTNAME,
-    MONGO_PORT,
-    MONGO_DB,
-  } = process.env;
+  const { MONGO_DB_NAME, MONGO_CONNECT_URI } = process.env;
 
-  if (
-    !MONGO_USERNAME ||
-    !MONGO_PASSWORD ||
-    !MONGO_HOSTNAME ||
-    !MONGO_PORT ||
-    !MONGO_DB
-  ) {
-    console.error(
-      "❌ Missing database configuration (MONGO_USERNAME, MONGO_PASSWORD, MONGO_HOSTNAME, MONGO_PORT, MONGO_DB) in .env file"
-    );
+  if (!MONGO_CONNECT_URI || !MONGO_DB_NAME) {
+    console.error("❌ Missing MongoDB Atlas configuration in .env");
     process.exit(1);
   }
 
-  const url = `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_HOSTNAME}:${MONGO_PORT}/${MONGO_DB}?authSource=admin`;
+  const url = `${MONGO_CONNECT_URI}`;
+
   const options = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    connectTimeoutMS: 10000,
   };
 
   mongoose
     .connect(url, options)
     .then(() => {
-      console.log(`✅ Successfully connected to database: ${MONGO_DB}`);
+      console.log(`✅ Connected to MongoDB Atlas: ${MONGO_DB_NAME}`);
     })
     .catch((error) => {
-      console.error("❌ Failed to connect:", error);
+      console.error("❌ Connection failed:", error);
       process.exit(1);
     });
 
   const dbConnection = mongoose.connection;
-  dbConnection.on("error", (err) =>
-    console.error(`❌ Connection error: ${err}`)
-  );
+  dbConnection.on("error", (err) => console.error(`❌ MongoDB error: ${err}`));
   dbConnection.once("open", () =>
-    console.log(`📂 Database ${MONGO_DB} is ready!`)
+    console.log(`📂 MongoDB Atlas ${MONGO_DB_NAME} is ready!`)
   );
 };

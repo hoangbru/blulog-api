@@ -56,5 +56,5 @@ routes.forEach((router) => app.use("/api", router));
 
 // Start the server
 app.listen(port, () => {
-  console.log(`🚀 Server is running on ${process.env.APP_URL}:${port}`);
+  console.log(`🚀 Server is running on ${process.env.APP_URL}`);
 });

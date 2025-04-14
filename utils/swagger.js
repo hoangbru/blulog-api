@@ -41,7 +41,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `${process.env.APP_URL}:${process.env.PORT}`,
+        url: `${process.env.APP_URL}`,
       },
     ],
   },
@@ -52,5 +52,5 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
 export const swaggerDocs = (app, port) => {
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-  console.log(`📜 Swagger docs available at ${process.env.APP_URL}:${port}/api/docs`);
+  console.log(`📜 Swagger docs available at ${process.env.APP_URL}/api/docs`);
 };

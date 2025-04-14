@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "dev": "nodemon --inspect=0.0.0.0:9229 app.js"
+    "dev": "nodemon app.js"
   },
   "keywords": [],
   "author": "",
